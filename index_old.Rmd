@@ -19,19 +19,14 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 # Load packages 
 if(!require(pacman)) install.packages("pacman")
-pacman::p_load(plotly, 
-               tidyverse, 
-               reactable, 
-               here,
-               janitor)
+pacman::p_load(plotly, tidyverse, reactable, here)
 ```
 
 ```{r}
 ## Import data
-df_happy <- 
-  read_csv(here("data/share-of-people-who-say-they-are-happy.csv")) %>% 
-  clean_names() %>% 
-  rename(country = entity)
+cantril <- 
+  read_csv(here("data/happiness-cantril-ladder.csv")) %>% 
+  rename(Country = Entity)
 ```
 
 “Please imagine a ladder, with steps numbered from 0 at the bottom to 10 at the top. The top of the ladder represents the best possible life for you and the bottom of the ladder represents the worst possible life for you. On which step of the ladder would you say you personally feel you stand at this time?”
@@ -41,40 +36,31 @@ df_happy <-
 ## 🔢 Table
 
 ```{r}
-
-df_happy %>% 
-  pivot_wider(names_from = year, 
-              values_from = happiness_happy_aggregate) %>% 
-  select(country, 
-         `1993`, 
-         `2022`) %>% 
-  filter(!is.na(`1993`),
-         !is.na(`2022`)) %>% 
-  mutate(absolute_change = round(`2022` - `1993`, 3)) %>% 
-  mutate(relative_change = (`2022` - `1993`) / `1993` * 100) %>% 
+cantril %>% 
+  filter(Year %in% c(2011, 2022)) %>% 
+  pivot_wider(names_from = Year, values_from = `Cantril ladder score`, id_cols = Country) %>% 
+  select(Country, `2011`, `2022`) %>% 
+  mutate(`Absolute change` = round(`2022` - `2011`, 3)) %>% 
+  mutate(`Relative change` = (`2022` - `2011`) / `2011`) %>% 
   reactable(
-    columns = list(relative_change = colDef(format = colFormat(percent = TRUE, 
-                                                               digits = 1)))
+    columns = list(`Relative change` = colDef(format = colFormat(percent = TRUE, digits = 1))) 
   )
 ```
 
 ## 🌎 Map
 
 ```{r}
-df_happy %>% 
-  mutate(happiness_happy_aggregate = round(happiness_happy_aggregate, 2)) %>%
+cantril %>% 
+  mutate(`Cantril ladder score` = round(`Cantril ladder score`, 2)) %>%
   plot_geo(width = 940) %>% 
   add_trace(
-    z = ~ happiness_happy_aggregate,
-    color = ~ happiness_happy_aggregate,
-    locations = ~ code,
-    text = ~ country,
-    frame = ~ year, 
-    colors = "YlGn"
+    z = ~`Cantril ladder score`,
+    color = ~`Cantril ladder score`,
+    locations = ~Code,
+    text = ~Country,
+    frame = ~Year, colors = "YlGn"
   ) %>% 
   colorbar(title = NULL)
-
-
 ```
 
 
@@ -82,26 +68,19 @@ df_happy %>%
 
 ```{r}
 # simple line chart of the data, for five countries on different continents (ggplot, piped into ggplotly)
-happiness_chart <- 
-  df_happy %>% 
-  filter(country %in% c("Brazil", 
-                        "China", 
-                        "India", 
-                        "Rusia",
-                        "South Africa" 
-                        )) %>%
-  ggplot(aes(x = year, 
-             y = happiness_happy_aggregate, 
-             color = country)) +
+
+cantril_chart <- 
+  cantril %>% 
+  filter(Country %in% c("Norway", "Australia", "Germany", "Bolivia", "Colombia", "Bhutan")) %>%
+  ggplot(aes(x = Year, y = `Cantril ladder score`, color = Country)) +
   geom_line() +
-  scale_y_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 10)) +
   labs(x = NULL,
        y = NULL, 
        color = NULL) +
   theme_minimal() 
 
-ggplotly(happiness_chart, width = 940)
-
+ggplotly(cantril_chart, width = 940)
 ```
 
 ## Advanced (Optional) 📈
@@ -113,36 +92,32 @@ Note that this is not a required task, but rather a showcase of what can be achi
 ```{r}
 pacman::p_load(crosstalk)
 
-# Assuming highlight_key() is correct and df_happy is your dataframe
-shared_happy <- highlight_key(df_happy)
 
-# Creating a plotly graph
-happy_plotly <- plot_ly(
-  data = shared_happy,
-  x = ~year,
-  y = ~happiness_happy_aggregate,
-  color = ~country,
-  type = "scatter",
+# Crosstalk shared data
+shared_cantril <- highlight_key(cantril)
+
+cantril_plotly <- plot_ly(
+  shared_cantril, 
+  x = ~Year, 
+  y = ~`Cantril ladder score`, 
+  color = ~Country, 
+  type = "scatter", 
   mode = "lines+markers"
 ) %>%
-  layout(yaxis = list(title = "Happiness Aggregate", range = c(0, 10)))
+  layout(yaxis = list(range = c(0, 10)))
 
-# Filter selection for country, assuming using Shiny or crosstalk
+
 country_filter <- filter_select(
-  inputId = "country_filter",
-  label = "Select a country to examine:",
-  choices = unique(shared_happy$country),
-  selected = unique(shared_happy$country)[1],
+  "country_filter", 
+  "Select a country to examine", 
+  shared_cantril, 
+  ~Country, 
   multiple = TRUE
 )
 
-# Using bscols for layout, ensure you have the appropriate libraries if it's specific to your framework
 bscols(
-  widths = c(4, 8),
-  list(country_filter),
-  list(happy_plotly)
+  list(country_filter, cantril_plotly)
 )
-
 ```
 
 <script>
