@@ -145,7 +145,7 @@ bscols(
 
 <script>
 function filter_default() {
-  var default_countries = ["Norway", "Australia", "Germany", "Bolivia", "Colombia", "Bhutan"]; // Set default countries here
+  var default_countries = ["South Africa", "Nigeria", "Kenya", "Egypt"]; // Set default countries here
   document.getElementById("country_filter").getElementsByClassName("selectized")[0].selectize.setValue(default_countries, false);
 }
 window.onload = filter_default;
