@@ -113,39 +113,35 @@ Note that this is not a required task, but rather a showcase of what can be achi
 ```{r}
 pacman::p_load(crosstalk)
 
-# Assuming highlight_key() is correct and df_happy is your dataframe
+
+# Crosstalk shared data
 shared_happy <- highlight_key(df_happy)
 
-
-# Creating a plotly graph
 happy_plotly <- plot_ly(
-  data = shared_happy,
-  x = ~ year,
-  y = ~ happiness_happy_aggregate,
-  color = ~country,
-  type = "scatter",
+  shared_happy, 
+  x = ~year, 
+  y = ~`happiness_happy_aggregate`, 
+  color = ~country, 
+  type = "scatter", 
   mode = "lines+markers"
 ) %>%
-  layout(yaxis = list(title = "Happiness Aggregate", range = c(0, 10)))
+  layout(yaxis = list(range = c(0, 100)))
 
-# Filter selection for country using crosstalk
+
 country_filter <- filter_select(
-  id = "country_filter",
-  label = "Select a country to examine:",
-  sharedData = shared_happy,
-  group = ~country,
+  "country_filter", 
+  "Select a country to examine", 
+  shared_happy, 
+  ~country, 
   multiple = TRUE
 )
 
-# Display using bscols from crosstalk
 bscols(
-  widths = c(3, 9),
-  country_filter,
-  happy_plotly
+  list(country_filter, happy_plotly)
 )
-
-
 ```
+
+
 
 <script>
 function filter_default() {
